@@ -1,0 +1,12 @@
+[package]
+name = "kpwn"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+cstr = "0.2.11"
+log = "0.4.20"
+nix = "0.26.2"
+
+[dev-dependencies]
+env_logger = "0.10.0"

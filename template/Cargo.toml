@@ -1,0 +1,14 @@
+[package]
+name = "exp"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+kpwn = { path = "../kpwn" }
+log = "0.4"
+
+[dependencies.env_logger]
+version = "0.10"
+# Disable regex feature to reduce binary size
+default-features = false
+features = ["auto-color", "humantime"]

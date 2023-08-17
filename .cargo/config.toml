@@ -1,0 +1,10 @@
+[build]
+target = "x86_64-unknown-linux-musl"
+
+[profile.release]
+debug = false
+#opt-level = "s"
+#lto = true
+#split-debuginfo = "unpacked"
+#strip = "debuginfo"
+#strip = "symbols"
