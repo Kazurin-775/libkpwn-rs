@@ -1,5 +1,3 @@
-use std::fs::OpenOptions;
-
 use kpwn::all::*;
 
 fn main() {
@@ -9,11 +7,7 @@ fn main() {
 
     whoami();
 
-    let dev = OpenOptions::new()
-        .read(true)
-        .write(true)
-        .open("/dev/foo")
-        .unwrap();
+    let dev = open_dev("/dev/foo").unwrap();
 
     dev.close().unwrap();
 }

