@@ -8,6 +8,8 @@ See [examples/](./examples/).
 
 ```sh
 cargo build --release --example qwb2018-core
+cargo build --release --example ciscn2017-babydriver-easy
+cargo build --release --example ciscn2017-babydriver-hard
 ```
 
 ## Start your own exploit
