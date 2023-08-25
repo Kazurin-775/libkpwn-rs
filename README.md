@@ -34,3 +34,16 @@ ln -s ./target/x86_64-unknown-linux-musl/release/exp ./exp
 nc -lNvp 5678 < ./exp
 # Inside the VM, run: nc $HOST_IP 5678 > /exp
 ```
+
+## Features included
+
+- A **kernel address rebaser** (for use after leaking KASLR), with a `fixup_all()` function to rebase a whole ROP chain at once (see [examples/qwb2018-core.rs](./examples/qwb2018-core.rs))
+- Helper functions for **easier file operations**, such as:
+    - Opening device files with `O_RDWR`
+    - Opening `/dev/ptmx` with `O_RDWR | O_NOCTTY`
+    - Directly reading data into a C struct
+    - ... and more (see [src/file_ext.rs](./src/file_ext.rs))
+- `ioctl(2)` with customized `struct pt_regs` (for easier kernel-mode stack pivoting; see [examples/minilctf2022-kgadget.rs](./examples/minilctf2022-kgadget.rs)). Say farewell to those complicated `__asm__ __volatile__()`s!
+- Create x86\_64 **`iretq` stack frames** (i.e. RIP, CS, FLAGS, RSP, SS) with a single function call
+- `execlp("sh")` or `whoami()` with a single function call
+- `mmap(2)` spraying (for ret2dir)
