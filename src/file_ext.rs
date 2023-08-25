@@ -74,6 +74,8 @@ impl FileExt for std::fs::File {
             in("rsi") cmd,
             in("rdx") arg,
             lateout("rax") result,
+            out("rcx") _,
+            out("r11") _,
 
             options(nostack),
         );
