@@ -10,6 +10,7 @@ See [examples/](./examples/).
 cargo build --release --example qwb2018-core
 cargo build --release --example ciscn2017-babydriver-easy
 cargo build --release --example ciscn2017-babydriver-hard
+cargo build --release --example minilctf2022-kgadget
 ```
 
 ## Start your own exploit
