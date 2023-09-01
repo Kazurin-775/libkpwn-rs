@@ -11,8 +11,7 @@ where
         // O_CLOEXEC is omitted (which is different from Rust's std::fs module)
         OFlag::O_RDWR,
         Mode::from_bits_truncate(0o666),
-    )
-    .unwrap();
+    )?;
     Ok(unsafe { File::from_raw_fd(fd) })
 }
 
@@ -21,7 +20,6 @@ pub fn open_ptmx() -> nix::Result<File> {
         "/dev/ptmx",
         OFlag::O_RDWR | OFlag::O_NOCTTY,
         Mode::from_bits_truncate(0o666),
-    )
-    .unwrap();
+    )?;
     Ok(unsafe { File::from_raw_fd(fd) })
 }
