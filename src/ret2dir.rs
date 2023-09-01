@@ -6,7 +6,7 @@ use std::{
 use nix::sys::mman::{MapFlags, ProtFlags};
 
 pub struct MmapHandle {
-    ptr: *mut u8,
+    ptr: *mut MmapPage,
     num_pages: usize,
 }
 
@@ -43,10 +43,9 @@ impl MmapHandle {
     }
 
     pub fn copy_first_page_to_others(&mut self) {
-        let src_page = unsafe { std::slice::from_raw_parts(self.ptr, 1 << 12) };
+        let src_page = unsafe { &(*self.ptr).content };
         for dest in 1..self.num_pages {
-            let dest_page =
-                unsafe { std::slice::from_raw_parts_mut(self.ptr.add(dest << 12), 1 << 12) };
+            let dest_page = unsafe { &mut (*self.ptr.add(dest)).content };
             dest_page.copy_from_slice(src_page);
         }
     }
@@ -57,14 +56,14 @@ impl Index<usize> for MmapHandle {
 
     fn index(&self, index: usize) -> &Self::Output {
         assert!(index < self.num_pages);
-        unsafe { &*self.ptr.add(index << 12).cast() }
+        unsafe { &*self.ptr.add(index) }
     }
 }
 
 impl IndexMut<usize> for MmapHandle {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         assert!(index < self.num_pages);
-        unsafe { &mut *self.ptr.add(index << 12).cast() }
+        unsafe { &mut *self.ptr.add(index) }
     }
 }
 
