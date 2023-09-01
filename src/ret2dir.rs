@@ -1,4 +1,7 @@
-use std::{marker::PhantomData, num::NonZeroUsize};
+use std::{
+    num::NonZeroUsize,
+    ops::{Index, IndexMut},
+};
 
 use nix::sys::mman::{MapFlags, ProtFlags};
 
@@ -7,9 +10,9 @@ pub struct MmapHandle {
     num_pages: usize,
 }
 
-pub struct MmapPage<'a> {
-    ptr: *mut u8,
-    _phantom: PhantomData<&'a mut ()>,
+#[repr(C)]
+pub struct MmapPage {
+    content: [u8; 1 << 12],
 }
 
 impl MmapHandle {
@@ -31,16 +34,12 @@ impl MmapHandle {
         })
     }
 
-    pub fn get_page(&mut self, index: usize) -> MmapPage<'_> {
-        assert!(index < self.num_pages);
-        MmapPage {
-            ptr: unsafe { self.ptr.add(index << 12) },
-            _phantom: PhantomData,
-        }
+    pub fn get_page(&mut self, index: usize) -> &mut MmapPage {
+        &mut self[index]
     }
 
-    pub fn first_page(&mut self) -> MmapPage<'_> {
-        self.get_page(0)
+    pub fn first_page(&mut self) -> &mut MmapPage {
+        &mut self[0]
     }
 
     pub fn copy_first_page_to_others(&mut self) {
@@ -50,6 +49,22 @@ impl MmapHandle {
                 unsafe { std::slice::from_raw_parts_mut(self.ptr.add(dest << 12), 1 << 12) };
             dest_page.copy_from_slice(src_page);
         }
+    }
+}
+
+impl Index<usize> for MmapHandle {
+    type Output = MmapPage;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        assert!(index < self.num_pages);
+        unsafe { &*self.ptr.add(index << 12).cast() }
+    }
+}
+
+impl IndexMut<usize> for MmapHandle {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        assert!(index < self.num_pages);
+        unsafe { &mut *self.ptr.add(index << 12).cast() }
     }
 }
 
@@ -63,13 +78,13 @@ impl Drop for MmapHandle {
     }
 }
 
-impl<'a> MmapPage<'a> {
+impl MmapPage {
     pub fn as_bytes_mut(&mut self) -> &mut [u8] {
-        unsafe { std::slice::from_raw_parts_mut(self.ptr, 1 << 12) }
+        &mut self.content
     }
 
     pub fn as_u64_array_mut(&mut self) -> &mut [u64] {
-        unsafe { std::slice::from_raw_parts_mut(self.ptr.cast(), 1 << 12 >> 3) }
+        unsafe { std::slice::from_raw_parts_mut(self.content.as_mut_ptr().cast(), 1 << 12 >> 3) }
     }
 
     pub fn init_with_u64_array(&mut self, array: &[u64]) {
