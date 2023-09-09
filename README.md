@@ -47,3 +47,4 @@ nc -lNvp 5678 < ./exp
 - Create x86\_64 **`iretq` stack frames** (i.e. RIP, CS, FLAGS, RSP, SS) with a single function call
 - `execlp("sh")` or `whoami()` with a single function call
 - `mmap(2)` spraying (for ret2dir)
+- A minimum `setjmp()`-like context switcher, which allows you to **reuse local variables in multi-stage exploits** (which is super handy due to Rust's limitations on global variables)
