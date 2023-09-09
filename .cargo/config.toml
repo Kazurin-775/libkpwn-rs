@@ -3,6 +3,9 @@ target = "x86_64-unknown-linux-musl"
 
 [profile.release]
 debug = false
+# Disable unwinding
+# See also https://users.rust-lang.org/t/70461
+panic = "abort"
 #opt-level = "s"
 #lto = true
 #split-debuginfo = "unpacked"
