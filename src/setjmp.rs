@@ -1,4 +1,14 @@
-use std::{cell::UnsafeCell, convert::Infallible};
+use std::{cell::UnsafeCell, convert::Infallible, mem::ManuallyDrop};
+
+unsafe extern "C" fn setjmp_call_rust_fn<F>(f: *mut ManuallyDrop<F>) -> Infallible
+where
+    F: FnOnce() -> Infallible,
+{
+    // "Move" the instance of `F` out of the pointer and into this function's
+    // stack frame by abusing the functionality of `ManuallyDrop`.
+    let f = ManuallyDrop::take(&mut *f);
+    f()
+}
 
 unsafe extern "C" fn restore_registers(buf: *mut usize) -> ! {
     std::arch::asm!(
@@ -10,7 +20,6 @@ unsafe extern "C" fn restore_registers(buf: *mut usize) -> ! {
         "mov   r14, [rdi + 0x30]",
         "mov   r15, [rdi + 0x38]",
 
-        "mov   eax, 1",
         "jmp   qword ptr [rdi]",
 
         in("rdi") buf,
@@ -33,8 +42,14 @@ impl Setjmp {
         }
     }
 
-    pub fn set_and_run(&self, f: impl FnOnce() -> Infallible) {
-        let status: i32;
+    pub fn set_and_run<F>(&self, f: F)
+    where
+        F: FnOnce() -> Infallible,
+    {
+        // As we are going to move `f` into another function through a pointer,
+        // prevent is destructor from being called by this function by using
+        // `ManuallyDrop`.
+        let mut f = ManuallyDrop::new(f);
 
         // Save all callee-saved registers to self.regs.
         // This assembly block must be inlined into this function in order
@@ -56,23 +71,22 @@ impl Setjmp {
                 "mov   [rdi + 0x30], r14",
                 "mov   [rdi + 0x38], r15",
 
-                "mov   eax, 0",
+                // Obtain a new stack frame (by avoiding the 128-byte stack red
+                // zone) and call setjmp_call_rust_fn::<F>(fn_ptr).
+                "sub   rsp, 0x108",
+                "mov   rdi, rdx",
+                "jmp   rsi",
+
                 "3:",
 
                 in("rdi") self.regs.get(),
-                lateout("eax") status,
+                in("rsi") setjmp_call_rust_fn::<F> as usize,
+                in("rdx") &mut f as *mut ManuallyDrop<F>,
                 clobber_abi("C"),
             );
         }
 
-        if status == 0 {
-            f();
-            unreachable!();
-        } else {
-            // log::debug!("Returned from saved state");
-            // Don't let the destructor of f cause any problems
-            std::mem::forget(f);
-        }
+        // log::debug!("Returned from saved state");
     }
 
     pub unsafe fn resume_from_ckpt(&self) -> ! {
@@ -86,15 +100,10 @@ fn test_setjmp() {
     let mut result = 0;
     sj.set_and_run(|| {
         result = 42;
-        std::hint::black_box(&result);
+
         unsafe {
             sj.resume_from_ckpt();
         }
     });
-    // Any setjmp operations in Rust will result in very strange compiler
-    // optimizations, which may cause tests to fail when built in release mode.
-    // Here, we use `black_box()` on references of `result` to force the Rust
-    // compiler to treat it as a volatile variable.
-    std::hint::black_box(&mut result);
     assert_eq!(result, 42);
 }
