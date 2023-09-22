@@ -73,6 +73,14 @@ impl Setjmp {
 
                 // Obtain a new stack frame (by avoiding the 128-byte stack red
                 // zone) and call setjmp_call_rust_fn::<F>(fn_ptr).
+                //
+                // Note that we don't actually use C's `setjmp() / longjmp()`
+                // semantics here, as this will result in undefined behavior
+                // in Rust, as discussed here:
+                // https://github.com/rust-lang/libc/pull/1216
+                //
+                // For more information (and how this was previously
+                // implemented), see the commit `08cb4023` in this repo.
                 "sub   rsp, 0x108",
                 "mov   rdi, rdx",
                 "jmp   rsi",
