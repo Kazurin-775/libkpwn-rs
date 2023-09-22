@@ -1,5 +1,45 @@
 use std::{cell::UnsafeCell, convert::Infallible, mem::ManuallyDrop};
 
+unsafe extern "C" fn save_registers_and_call(buf: *mut usize, fn_addr: usize, arg0: usize) {
+    // Save all callee-saved registers to self.regs.
+    unsafe {
+        std::arch::asm!(
+            // So `lea rXX, [rip + some_label]` WORKS!! Thanks to the great
+            // x86_64 architecture...
+            "lea   rax, [rip + 3f]",
+            "mov   [rdi], rax",
+            "mov   [rdi + 0x08], rsp",
+            "mov   [rdi + 0x10], rbp",
+            "mov   [rdi + 0x18], rbx",
+            "mov   [rdi + 0x20], r12",
+            "mov   [rdi + 0x28], r13",
+            "mov   [rdi + 0x30], r14",
+            "mov   [rdi + 0x38], r15",
+
+            // Obtain a new stack frame (by avoiding the 128-byte stack red
+            // zone) and call setjmp_call_rust_fn::<F>(fn_ptr).
+            //
+            // Note that we don't actually use C's `setjmp() / longjmp()`
+            // semantics here, as this will result in undefined behavior
+            // in Rust, as discussed here:
+            // https://github.com/rust-lang/libc/pull/1216
+            //
+            // For more information (and how this was previously
+            // implemented), see the commit `08cb4023` in this repo.
+            "sub   rsp, 0x108",
+            "mov   rdi, rdx",
+            "jmp   rsi",
+
+            "3:",
+
+            in("rdi") buf,
+            in("rsi") fn_addr,
+            in("rdx") arg0,
+            clobber_abi("C"),
+        );
+    }
+}
+
 unsafe extern "C" fn setjmp_call_rust_fn<F>(f: *mut ManuallyDrop<F>) -> Infallible
 where
     F: FnOnce() -> Infallible,
@@ -51,46 +91,11 @@ impl Setjmp {
         // `ManuallyDrop`.
         let mut f = ManuallyDrop::new(f);
 
-        // Save all callee-saved registers to self.regs.
-        // This assembly block must be inlined into this function in order
-        // to make it work properly.
-        // If it is otherwise moved to a standalone extern "C" function, then
-        // the function's return address may get corrupted by the execution of
-        // f(), which could result in very strange segfaults (or even worse)
-        // upon `self.resume_from_ckpt()`.
         unsafe {
-            std::arch::asm!(
-                // So THIS WORKS!! Thanks to the great x86_64 architecture...
-                "lea   rax, [rip + 3f]",
-                "mov   [rdi], rax",
-                "mov   [rdi + 0x08], rsp",
-                "mov   [rdi + 0x10], rbp",
-                "mov   [rdi + 0x18], rbx",
-                "mov   [rdi + 0x20], r12",
-                "mov   [rdi + 0x28], r13",
-                "mov   [rdi + 0x30], r14",
-                "mov   [rdi + 0x38], r15",
-
-                // Obtain a new stack frame (by avoiding the 128-byte stack red
-                // zone) and call setjmp_call_rust_fn::<F>(fn_ptr).
-                //
-                // Note that we don't actually use C's `setjmp() / longjmp()`
-                // semantics here, as this will result in undefined behavior
-                // in Rust, as discussed here:
-                // https://github.com/rust-lang/libc/pull/1216
-                //
-                // For more information (and how this was previously
-                // implemented), see the commit `08cb4023` in this repo.
-                "sub   rsp, 0x108",
-                "mov   rdi, rdx",
-                "jmp   rsi",
-
-                "3:",
-
-                in("rdi") self.regs.get(),
-                in("rsi") setjmp_call_rust_fn::<F> as usize,
-                in("rdx") &mut f as *mut ManuallyDrop<F>,
-                clobber_abi("C"),
+            save_registers_and_call(
+                self.regs.get().cast(),
+                setjmp_call_rust_fn::<F> as usize,
+                &mut f as *mut ManuallyDrop<F> as usize,
             );
         }
 
