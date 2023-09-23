@@ -2,7 +2,13 @@ A Rust library that tries to make kernel exploits simpler. Potentially handy for
 
 想尝试一下用 Rust 来做 Linux kernel pwn 题目的感觉吗？快来试试吧。
 
-## Examples
+## How does it look like?
+
+The following screenshot is an output of the example exploit `hxpctf2020-kernel-rop-setjmp`. It demonstrates the basic procedure of an FG-KASLR-oriented kernel exploit, pretty-printed by the `env_logger` Rust crate.
+
+![](./screenshot.png)
+
+## Example exploits for CTF challenges
 
 The [examples/](./examples/) directory contains solutions for several entry-level kernel CTF challenges, as listed below:
 
