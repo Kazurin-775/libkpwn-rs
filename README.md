@@ -7,10 +7,16 @@ A Rust library that tries to make kernel exploits simpler. Potentially handy for
 The [examples/](./examples/) directory contains solutions for several entry-level kernel CTF challenges, as listed below:
 
 ```sh
+# Kernel ROP example
 cargo build --release --example qwb2018-core
+# UAF + struct cred overwrite
 cargo build --release --example ciscn2017-babydriver-easy
+# UAF + tty_struct exploit
 cargo build --release --example ciscn2017-babydriver-hard
+# ROP + ret2dir example
 cargo build --release --example minilctf2022-kgadget
+# FG-KASLR example (using the "setjmp" pattern)
+cargo build --release --example hxpctf2020-kernel-rop-setjmp
 ```
 
 Please read through their source code to gain a basic understanding of what this crate could do for you.
