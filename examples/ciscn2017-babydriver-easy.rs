@@ -6,10 +6,10 @@ struct FakeCred {
     pub usage: i32,
     pub uid: u32,
     pub gid: u32,
-    pub euid: u32,
-    pub egid: u32,
     pub suid: u32,
     pub sgid: u32,
+    pub euid: u32,
+    pub egid: u32,
 }
 
 fn main() {
